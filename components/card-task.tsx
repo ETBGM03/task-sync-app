@@ -36,13 +36,18 @@ export const TaskItem: React.FC<TaskItemProps> = ({
       entering={FadeInDown.delay(index * 50).springify()}
       layout={Layout.springify()}
       style={styles.container}
+      testID="task-item"
     >
       <TouchableOpacity
         style={styles.checkbox}
         onPress={() => onToggle(task.id)}
         activeOpacity={0.7}
+        testID="task-checkbox"
       >
-        <View style={[styles.checkboxInner, task.completed && styles.checked]}>
+        <View
+          style={[styles.checkboxInner, task.completed && styles.checked]}
+          testID="task-checkbox-inner"
+        >
           {task.completed && (
             <Ionicons name="checkmark" size={18} color="#fff" />
           )}
@@ -50,16 +55,23 @@ export const TaskItem: React.FC<TaskItemProps> = ({
       </TouchableOpacity>
 
       <View style={styles.content}>
-        <Text style={[styles.title, task.completed && styles.completedText]}>
+        <Text
+          style={[styles.title, task.completed && styles.completedText]}
+          testID="task-title"
+        >
           {task.title}
         </Text>
         {task.description && (
-          <Text style={styles.description} numberOfLines={2}>
+          <Text
+            style={styles.description}
+            numberOfLines={2}
+            testID="task-description"
+          >
             {task.description}
           </Text>
         )}
         <View style={styles.footer}>
-          <Text style={styles.date}>
+          <Text style={styles.date} testID="task-date">
             {new Date(task.createdAt).toLocaleDateString()}
           </Text>
         </View>
@@ -70,6 +82,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({
           style={styles.actionButton}
           onPress={() => onEdit(task)}
           activeOpacity={0.7}
+          testID="task-edit-button"
         >
           <Ionicons name="create-outline" size={22} color="#007AFF" />
         </TouchableOpacity>
@@ -77,6 +90,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({
           style={styles.actionButton}
           onPress={handleDelete}
           activeOpacity={0.7}
+          testID="task-delete-button"
         >
           <Ionicons name="trash-outline" size={22} color="#FF3B30" />
         </TouchableOpacity>
