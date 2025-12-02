@@ -1,3 +1,4 @@
+import { apiService } from "@/api/api-client";
 import { Task } from "@/types/task.types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
@@ -64,7 +65,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       synced: false,
     };
 
-    set((state: Task) => ({
+    set((state) => ({
       tasks: [...state.tasks, newTask],
     }));
 
@@ -114,7 +115,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
   // Delete task
   deleteTask: async (id) => {
-    const taskToDelete = get().tasks.find((t) => t.id === id);
+    const taskToDelete = get().tasks.find((task) => task.id === id);
 
     set((state) => ({
       tasks: state.tasks.filter((task) => task.id !== id),
@@ -224,19 +225,57 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   // Load from storage
   loadFromStorage: async () => {
     try {
+      set({ isLoading: true, error: null });
+
+      // First, try to fetch tasks from API
+      try {
+        if (get().isOnline) {
+          const tasks = await apiService.getTasks();
+          set({
+            tasks: tasks.map((t) => ({ ...t, synced: true })),
+            lastSync: Date.now(),
+          });
+          await get().saveToStorage();
+        }
+      } catch (apiError) {
+        console.warn(
+          "Failed to fetch tasks from API, loading from storage:",
+          apiError
+        );
+        // If API fails, fall back to local storage
+      }
+
+      // Load from local storage (as fallback or to get pending actions)
       const [tasksStr, actionsStr, syncStr] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.TASKS),
         AsyncStorage.getItem(STORAGE_KEYS.PENDING_ACTIONS),
         AsyncStorage.getItem(STORAGE_KEYS.LAST_SYNC),
       ]);
 
+      // Only use local storage tasks if we didn't get them from API
+      if (!get().tasks.length && tasksStr) {
+        set({
+          tasks: JSON.parse(tasksStr),
+        });
+      }
+
+      // Always load pending actions and last sync from storage
       set({
-        tasks: tasksStr ? JSON.parse(tasksStr) : [],
         pendingActions: actionsStr ? JSON.parse(actionsStr) : [],
-        lastSync: syncStr ? parseInt(syncStr, 10) : null,
+        lastSync: syncStr ? parseInt(syncStr, 10) : get().lastSync,
+        isLoading: false,
       });
+
+      // If we have pending actions and we're online, try to sync
+      if (get().isOnline && get().pendingActions.length > 0) {
+        get().syncWithServer();
+      }
     } catch (error) {
       console.error("Failed to load from storage:", error);
+      set({
+        isLoading: false,
+        error: error instanceof Error ? error.message : "Failed to load tasks",
+      });
     }
   },
 

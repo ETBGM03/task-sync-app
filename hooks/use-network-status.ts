@@ -1,34 +1,17 @@
 import { useTaskStore } from "@/store/task-store";
-import NetInfo from "@react-native-community/netinfo";
+import { useNetworkState } from "expo-network";
 import { useEffect } from "react";
 
 export const useNetworkStatus = () => {
   const setOnlineStatus = useTaskStore((state) => state.setOnlineStatus);
   const isOnline = useTaskStore((state) => state.isOnline);
+  const networkState = useNetworkState();
 
   useEffect(() => {
-    // Subscribe to network state updates
-    const unsubscribe = NetInfo.addEventListener((state) => {
-      const online = state.isConnected && state.isInternetReachable !== false;
-      setOnlineStatus(online!);
-
-      if (online) {
-        console.log("📡 Connection restored - syncing...");
-      } else {
-        console.log("📴 Offline mode activated");
-      }
-    });
-
-    // Check initial state
-    NetInfo.fetch().then((state) => {
-      const online = state.isConnected && state.isInternetReachable !== false;
-      setOnlineStatus(online || false);
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [setOnlineStatus]);
+    if (networkState.isConnected !== null) {
+      setOnlineStatus(networkState.isConnected as boolean);
+    }
+  }, [isOnline, networkState, setOnlineStatus]);
 
   return { isOnline };
 };

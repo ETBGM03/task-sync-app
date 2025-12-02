@@ -1,9 +1,5 @@
-// src/services/api.ts
+import { Task } from "@/types/task.types";
 import axios, { AxiosError, AxiosInstance } from "axios";
-import { Task } from "../store/types";
-
-// Reemplaza con la URL de tu API
-const API_BASE_URL = "https://tu-api.com/api";
 
 class ApiService {
   private client: AxiosInstance;
@@ -12,7 +8,7 @@ class ApiService {
 
   constructor() {
     this.client = axios.create({
-      baseURL: API_BASE_URL,
+      baseURL: process.env.EXPO_PUBLIC_APP_API_URL_DOMAIN,
       timeout: 10000,
       headers: {
         "Content-Type": "application/json",
@@ -101,7 +97,7 @@ class ApiService {
   // Update task
   async updateTask(id: string, updates: Partial<Task>): Promise<Task> {
     return this.retryRequest(async () => {
-      const response = await this.client.put<Task>(`/tasks/${id}`, updates);
+      const response = await this.client.patch<Task>(`/tasks/${id}`, updates);
       return response.data;
     });
   }

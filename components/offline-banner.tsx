@@ -29,9 +29,7 @@ export const OfflineBanner: React.FC = () => {
 
   return (
     <Animated.View style={[styles.container, animatedStyle]}>
-      <Text style={styles.text}>
-        📴 Offline Mode - Changes will sync when online
-      </Text>
+      <Text style={styles.text}>📴 Offline Mode on</Text>
     </Animated.View>
   );
 };

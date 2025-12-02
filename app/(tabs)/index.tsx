@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
-  CellRendererProps,
+  ActivityIndicator,
   FlatList,
+  ListRenderItemInfo,
   StyleSheet,
   TextInput,
   TouchableOpacity,
@@ -15,21 +16,29 @@ import { OfflineBanner } from "@/components/offline-banner";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useThemeColor } from "@/hooks/use-theme-color";
-import { getTasks } from "@/services/get-task";
+import { useTaskStore } from "@/store/task-store";
 import { Task } from "@/types/task.types";
+import { notificationService } from "@/utils/notifications";
 import { Ionicons } from "@expo/vector-icons";
 import {
   BottomSheetBackdrop,
   BottomSheetModal,
   BottomSheetScrollView,
 } from "@gorhom/bottom-sheet";
-import { useQuery } from "@tanstack/react-query";
 
 export default function HomeScreen() {
-  const tasks = useQuery({
-    queryKey: ["tasks"],
-    queryFn: getTasks,
-  });
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+
+  const {
+    tasks,
+    isLoading,
+    isOnline,
+    addTask,
+    updateTask,
+    deleteTask,
+    toggleTaskComplete,
+  } = useTaskStore();
+
   const [searchQuery, setSearchQuery] = useState("");
 
   const textColor = useThemeColor({}, "text");
@@ -41,21 +50,68 @@ export default function HomeScreen() {
     console.log("handleSheetChanges", index);
   }, []);
 
-  const renderItem = useCallback(({ index, item }: CellRendererProps<Task>) => {
-    return (
-      <TaskItem
-        task={item}
-        onDelete={() => {}}
-        onEdit={() => {}}
-        onToggle={() => {}}
-        index={index}
-      />
-    );
-  }, []);
+  const snapPoints = useMemo(() => ["50%", "75%"], []);
 
-  const handleCreateTask = () => {
+  const handleEditTask = (task: Task) => {
+    setEditingTask(task);
     bottomSheetModalRef.current?.present();
   };
+
+  const handleCreateTask = () => {
+    setEditingTask(null);
+    bottomSheetModalRef.current?.present();
+  };
+
+  const handleSubmitTask = async (data: Partial<Task>) => {
+    if (editingTask) {
+      // Update existing task
+      await updateTask(editingTask.id, data);
+    } else {
+      // Create new task
+      await addTask(data as Task);
+      // Schedule reminder notification
+      notificationService.scheduleTaskReminder(data.title!, "new-task", 60);
+    }
+  };
+
+  const handleToggleTask = useCallback(
+    async (id: string) => {
+      const task = tasks.find((t) => t.id === id);
+      if (task && !task.completed) {
+        // Notify on completion
+        await notificationService.notifyTaskCompleted(task.title);
+      }
+      toggleTaskComplete(id);
+    },
+    [tasks, toggleTaskComplete]
+  );
+
+  const filteredTasks = useMemo(() => {
+    if (!searchQuery) return tasks;
+    const lowerQuery = searchQuery.toLowerCase();
+    return tasks.filter((task) =>
+      task.title.toLowerCase().includes(lowerQuery)
+    );
+  }, [searchQuery, tasks]);
+
+  const completedCount = filteredTasks.filter((task) => task.completed).length;
+  const totalCount = filteredTasks.length;
+
+  const renderItem = useCallback(
+    ({ item, index }: ListRenderItemInfo<Task>) => {
+      return (
+        <TaskItem
+          task={item}
+          onDelete={deleteTask}
+          onEdit={handleEditTask}
+          onToggle={handleToggleTask}
+          index={index}
+        />
+      );
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
 
   const renderBackdrop = useCallback(
     (props: any) => (
@@ -69,7 +125,27 @@ export default function HomeScreen() {
     []
   );
 
-  const snapPoints = useMemo(() => ["50%", "75%"], []);
+  const renderMainContent = () => {
+    if (isLoading && !tasks.length) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={tintColor} />
+          <ThemedText style={styles.loadingText}>Cargando...</ThemedText>
+        </View>
+      );
+    }
+
+    return (
+      <FlatList
+        data={filteredTasks}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.scrollContent}
+        renderItem={renderItem}
+        ListEmptyComponent={<EmptyState isSearchableQuery={searchQuery} />}
+        showsVerticalScrollIndicator={true}
+      />
+    );
+  };
 
   return (
     <>
@@ -81,8 +157,7 @@ export default function HomeScreen() {
               Mis Tareas
             </ThemedText>
             <ThemedText style={styles.headerSubtitle}>
-              {tasks.data?.length || "0"}{" "}
-              {tasks.data?.length === 1 ? "tarea" : "tareas"}
+              {completedCount} de {totalCount} completadas
             </ThemedText>
           </View>
           <TouchableOpacity
@@ -126,14 +201,7 @@ export default function HomeScreen() {
           )}
         </View>
 
-        <FlatList
-          data={tasks?.data}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.scrollContent}
-          renderItem={renderItem}
-          ListEmptyComponent={<EmptyState isSearchableQuery={searchQuery} />}
-          showsVerticalScrollIndicator={true}
-        />
+        {renderMainContent()}
       </ThemedView>
 
       <BottomSheetModal
@@ -148,21 +216,14 @@ export default function HomeScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <TaskFormContent
-            task={{
-              completed: false,
-              createdAt: new Date().toISOString(),
-              description: "",
-              priority: "high",
-              id: "",
-              title: "",
-            }}
+            task={editingTask as Task}
             onClose={() => bottomSheetModalRef.current?.dismiss()}
-            onSubmit={() => {}}
+            onSubmit={handleSubmitTask}
           />
         </BottomSheetScrollView>
       </BottomSheetModal>
 
-      <OfflineBanner />
+      {!isOnline && <OfflineBanner />}
     </>
   );
 }
@@ -285,5 +346,15 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#666",
   },
 });

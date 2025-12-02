@@ -16,11 +16,7 @@ import {
 interface TaskFormProps {
   task?: Task;
   onClose: () => void;
-  onSubmit: (data: {
-    title: string;
-    description?: string;
-    priority: TaskPriority;
-  }) => void;
+  onSubmit: (data: Partial<Task>) => void;
 }
 
 const PRIORITY_OPTIONS: { value: TaskPriority; label: string; icon: string }[] =

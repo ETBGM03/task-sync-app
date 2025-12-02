@@ -62,12 +62,6 @@ export const TaskItem: React.FC<TaskItemProps> = ({
           <Text style={styles.date}>
             {new Date(task.createdAt).toLocaleDateString()}
           </Text>
-          {!task.synced && (
-            <View style={styles.syncBadge}>
-              <Ionicons name="time-outline" size={12} color="#856404" />
-              <Text style={styles.syncText}>Pending</Text>
-            </View>
-          )}
         </View>
       </View>
 
