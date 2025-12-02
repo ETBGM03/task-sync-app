@@ -1,229 +1,174 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import Animated, { FadeInDown, Layout } from "react-native-reanimated";
 
-import { useThemeColor } from "@/hooks/use-theme-color";
 import { Task } from "@/types/task.types";
-import { getPriorityColor } from "@/utils/priority-task-color";
 
-import { ThemedText } from "./themed-text";
+interface TaskItemProps {
+  task: Task;
+  index: number;
+  onToggle: (id: string) => void;
+  onDelete: (id: string) => void;
+  onEdit: (task: Task) => void;
+}
 
-export interface CardTaskProps extends Task {}
-
-export default function CardTask(task: CardTaskProps) {
-  const cardBackground = useThemeColor({}, "background");
-  const iconColor = useThemeColor({}, "icon");
-  const tintColor = useThemeColor({}, "tint");
-  const priorityColor = getPriorityColor(task.priority, iconColor);
+export const TaskItem: React.FC<TaskItemProps> = ({
+  task,
+  index,
+  onToggle,
+  onDelete,
+  onEdit,
+}) => {
+  const handleDelete = () => {
+    Alert.alert("Delete Task", "Are you sure you want to delete this task?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () => onDelete(task.id),
+      },
+    ]);
+  };
 
   return (
-    <TouchableOpacity
-      style={[
-        styles.taskCard,
-        {
-          backgroundColor: cardBackground,
-          borderLeftColor: priorityColor,
-        },
-      ]}
-      activeOpacity={0.7}
+    <Animated.View
+      entering={FadeInDown.delay(index * 50).springify()}
+      layout={Layout.springify()}
+      style={styles.container}
     >
-      <View style={styles.taskContent}>
-        <View style={styles.taskHeader}>
-          <TouchableOpacity
-            style={[
-              styles.checkbox,
-              task.completed && styles.checkboxCompleted,
-              { borderColor: task.completed ? tintColor : iconColor },
-            ]}
-          >
-            {task.completed && (
-              <Ionicons name="checkmark" size={16} color={tintColor} />
-            )}
-          </TouchableOpacity>
-          <View style={styles.taskTitleContainer}>
-            <ThemedText
-              type="defaultSemiBold"
-              style={[
-                styles.taskTitle,
-                task.completed && styles.taskTitleCompleted,
-              ]}
-            >
-              {task.title}
-            </ThemedText>
-          </View>
-          <View
-            style={[
-              styles.priorityBadge,
-              { backgroundColor: priorityColor + "20" },
-            ]}
-          >
-            <View
-              style={[styles.priorityDot, { backgroundColor: priorityColor }]}
-            />
-          </View>
+      <TouchableOpacity
+        style={styles.checkbox}
+        onPress={() => onToggle(task.id)}
+        activeOpacity={0.7}
+      >
+        <View style={[styles.checkboxInner, task.completed && styles.checked]}>
+          {task.completed && (
+            <Ionicons name="checkmark" size={18} color="#fff" />
+          )}
         </View>
+      </TouchableOpacity>
+
+      <View style={styles.content}>
+        <Text style={[styles.title, task.completed && styles.completedText]}>
+          {task.title}
+        </Text>
         {task.description && (
-          <ThemedText
-            style={[
-              styles.taskDescription,
-              task.completed && styles.taskDescriptionCompleted,
-            ]}
-            numberOfLines={2}
-          >
+          <Text style={styles.description} numberOfLines={2}>
             {task.description}
-          </ThemedText>
+          </Text>
         )}
-        <View style={styles.taskFooter}>
-          <Ionicons name="time-outline" size={12} color={iconColor} />
-          <ThemedText style={styles.taskDate}>{task.createdAt}</ThemedText>
+        <View style={styles.footer}>
+          <Text style={styles.date}>
+            {new Date(task.createdAt).toLocaleDateString()}
+          </Text>
+          {!task.synced && (
+            <View style={styles.syncBadge}>
+              <Ionicons name="time-outline" size={12} color="#856404" />
+              <Text style={styles.syncText}>Pending</Text>
+            </View>
+          )}
         </View>
       </View>
-    </TouchableOpacity>
+
+      <View style={styles.actions}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => onEdit(task)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="create-outline" size={22} color="#007AFF" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={handleDelete}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="trash-outline" size={22} color="#FF3B30" />
+        </TouchableOpacity>
+      </View>
+    </Animated.View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-  },
-  header: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
-  },
-  headerTitle: {
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    opacity: 0.6,
-  },
-  addButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: "center",
-    alignItems: "center",
+    padding: 16,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    marginBottom: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     elevation: 3,
   },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginHorizontal: 20,
-    marginBottom: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  searchIcon: {
-    marginRight: 12,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    padding: 0,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  taskCard: {
-    borderRadius: 16,
-    marginBottom: 12,
-    padding: 16,
-    borderLeftWidth: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  taskContent: {
-    flex: 1,
-  },
-  taskHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
   checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    marginRight: 12,
+    justifyContent: "center",
+  },
+  checkboxInner: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     borderWidth: 2,
+    borderColor: "#007AFF",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
   },
-  checkboxCompleted: {
-    backgroundColor: "transparent",
+  checked: {
+    backgroundColor: "#007AFF",
   },
-  taskTitleContainer: {
+  content: {
     flex: 1,
   },
-  taskTitle: {
+  title: {
     fontSize: 16,
-    lineHeight: 22,
+    fontWeight: "600",
+    color: "#000",
+    marginBottom: 4,
   },
-  taskTitleCompleted: {
+  completedText: {
     textDecorationLine: "line-through",
-    opacity: 0.5,
+    color: "#999",
   },
-  priorityBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  priorityDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  taskDescription: {
+  description: {
     fontSize: 14,
+    color: "#666",
+    marginBottom: 8,
     lineHeight: 20,
-    marginBottom: 12,
-    opacity: 0.7,
   },
-  taskDescriptionCompleted: {
-    opacity: 0.4,
-  },
-  taskFooter: {
+  footer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    justifyContent: "space-between",
   },
-  taskDate: {
+  date: {
     fontSize: 12,
-    opacity: 0.5,
+    color: "#999",
   },
-  emptyState: {
-    flex: 1,
-    justifyContent: "center",
+  syncBadge: {
+    flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 80,
+    backgroundColor: "#FFF3CD",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 4,
   },
-  emptyTitle: {
-    marginTop: 24,
-    marginBottom: 8,
-    textAlign: "center",
+  syncText: {
+    fontSize: 11,
+    color: "#856404",
+    fontWeight: "500",
   },
-  emptyDescription: {
-    fontSize: 14,
-    textAlign: "center",
-    opacity: 0.6,
-    paddingHorizontal: 40,
+  actions: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginLeft: 8,
+    gap: 4,
+  },
+  actionButton: {
+    padding: 8,
   },
 });

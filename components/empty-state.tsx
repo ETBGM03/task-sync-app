@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet } from "react-native";
+import Animated, { FadeIn } from "react-native-reanimated";
 
 import { ThemedText } from "./themed-text";
 
@@ -13,34 +14,41 @@ export default function EmptyState(props: EmptyStateProps) {
   const iconColor = isSearchableQuery ? "#FFA500" : "#888888";
 
   return (
-    <View style={styles.emptyState}>
+    <Animated.View entering={FadeIn.duration(400)} style={styles.container}>
       <Ionicons name="document-text-outline" size={64} color={iconColor} />
-      <ThemedText type="subtitle" style={styles.emptyTitle}>
+      <ThemedText type="subtitle" style={styles.title}>
         {isSearchableQuery ? "No se encontraron tareas" : "No hay tareas"}
       </ThemedText>
-      <ThemedText style={styles.emptyDescription}>
+      <ThemedText style={styles.text}>
         {isSearchableQuery
           ? "Intenta con otros términos de búsqueda"
           : "Crea tu primera tarea presionando el botón +"}
       </ThemedText>
-    </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  emptyState: {
+  container: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 20,
+    paddingHorizontal: 40,
   },
-  emptyTitle: {
+  icon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  title: {
     fontSize: 20,
-    marginTop: 10,
-    marginBottom: 5,
+    fontWeight: "700",
+    color: "#000",
+    marginBottom: 8,
   },
-  emptyDescription: {
+  text: {
     fontSize: 16,
+    color: "#666",
     textAlign: "center",
+    lineHeight: 22,
   },
 });
