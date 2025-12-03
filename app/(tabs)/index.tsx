@@ -51,16 +51,26 @@ export default function HomeScreen() {
     bottomSheetModalRef.current?.present();
   };
 
+  const handleOpenSheetModal = () => {
+    bottomSheetModalRef.current?.present();
+  };
+
+  const handleCloseSheetModal = () => {
+    bottomSheetModalRef.current?.dismiss();
+  };
+
   const handleCreateTask = () => {
     setEditingTask(null);
-    bottomSheetModalRef.current?.present();
+    handleOpenSheetModal();
   };
 
   const handleSubmitTask = async (data: Task) => {
     if (editingTask) {
       updateTask(editingTask.id, data);
+      handleCloseSheetModal();
     } else {
       addTask(data);
+      handleCloseSheetModal();
       // Schedule reminder notification
       notificationService.scheduleTaskReminder(data.title!, "new-task", 60);
     }
