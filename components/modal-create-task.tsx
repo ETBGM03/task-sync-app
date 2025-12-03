@@ -1,9 +1,9 @@
 import { ThemedText } from "@/components/themed-text";
+import { useFormTask } from "@/hooks/use-form-task";
 import { useThemeColor } from "@/hooks/use-theme-color";
-import { Task, TaskPriority } from "@/types/task.types";
-import { getPriorityColor } from "@/utils/priority-task-color";
+import { Task } from "@/types/task.types";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
   Keyboard,
   Pressable,
@@ -12,30 +12,25 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Button } from "./ui/button";
 
 interface TaskFormProps {
   task?: Task;
   onClose: () => void;
-  onSubmit: (data: Partial<Task>) => void;
+  onSubmit: (data: Omit<Task, "id" | "createdAt">) => void;
 }
-
-const PRIORITY_OPTIONS: { value: TaskPriority; label: string; icon: string }[] =
-  [
-    { value: "low", label: "Baja", icon: "arrow-down-circle-outline" },
-    { value: "medium", label: "Media", icon: "remove-circle-outline" },
-    { value: "high", label: "Alta", icon: "arrow-up-circle-outline" },
-  ];
 
 export default function TaskFormContent({
   task,
   onClose,
   onSubmit,
 }: TaskFormProps) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [priority, setPriority] = useState<TaskPriority>("medium");
-  const [errors, setErrors] = useState<{ title?: string }>({});
-
+  const { handleSubmit, setStatusTask, setTitle, statusTask, title } =
+    useFormTask({
+      text: task?.title,
+      completed: task?.completed,
+      onSubmit,
+    });
   const textColor = useThemeColor({}, "text");
   const iconColor = useThemeColor({}, "icon");
   const tintColor = useThemeColor({}, "tint");
@@ -52,49 +47,12 @@ export default function TaskFormContent({
     "background"
   );
 
-  useEffect(() => {
-    if (task) {
-      setTitle(task.title);
-      setDescription(task.description || "");
-      setPriority(task.priority || "medium");
-    } else {
-      setTitle("");
-      setDescription("");
-      setPriority("medium");
-    }
-    setErrors({});
-  }, [task]);
-
-  const validate = (): boolean => {
-    const newErrors: { title?: string } = {};
-
-    if (!title.trim()) {
-      newErrors.title = "El título es requerido";
-    } else if (title.length < 3) {
-      newErrors.title = "El título debe tener al menos 3 caracteres";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = () => {
-    if (validate()) {
-      onSubmit({
-        title: title.trim(),
-        description: description.trim() || undefined,
-        priority,
-      });
-      handleClose();
-    }
-  };
-
   const handleClose = () => {
-    setTitle("");
-    setDescription("");
-    setPriority("medium");
-    setErrors({});
     onClose();
+  };
+
+  const handleChangeTaskStatus = (status: boolean) => {
+    setStatusTask(status);
   };
 
   return (
@@ -126,7 +84,6 @@ export default function TaskFormContent({
               {
                 color: textColor,
                 backgroundColor: inputBackground,
-                borderColor: errors.title ? "#FF3B30" : borderColor,
               },
             ]}
             value={title}
@@ -138,106 +95,70 @@ export default function TaskFormContent({
             maxLength={100}
             autoFocus={!task}
           />
-          {errors.title && (
-            <ThemedText style={styles.errorText}>{errors.title}</ThemedText>
-          )}
         </View>
 
-        {/* Description Input */}
-        <View style={styles.inputGroup}>
-          <ThemedText style={styles.label}>Descripción</ThemedText>
-          <TextInput
+        <View style={styles.priorityContainer}>
+          <Button
             style={[
-              styles.input,
-              styles.textArea,
+              styles.priorityOption,
               {
-                color: textColor,
-                backgroundColor: inputBackground,
-                borderColor,
+                backgroundColor: !statusTask ? tintColor : backgroundColor,
+                borderColor: !statusTask ? tintColor : borderColor,
               },
             ]}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Ingresa una descripción (opcional)"
-            placeholderTextColor={iconColor}
-            multiline
-            numberOfLines={4}
-            maxLength={500}
-            textAlignVertical="top"
-          />
-          <ThemedText style={styles.charCount}>
-            {description.length}/500
-          </ThemedText>
-        </View>
+            onPress={() => handleChangeTaskStatus(false)}
+          >
+            <ThemedText
+              style={[
+                styles.priorityLabel,
+                !statusTask && styles.priorityLabelSelected,
+              ]}
+            >
+              Pendiente
+            </ThemedText>
 
-        {/* Priority Selector */}
-        <View style={styles.inputGroup}>
-          <ThemedText style={styles.label}>Prioridad</ThemedText>
-          <View style={styles.priorityContainer}>
-            {PRIORITY_OPTIONS.map((option) => {
-              const isSelected = priority === option.value;
-              const priorityColor = getPriorityColor(option.value, tintColor);
-              return (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[
-                    styles.priorityOption,
-                    {
-                      backgroundColor: isSelected
-                        ? priorityColor
-                        : backgroundColor,
-                      borderColor: isSelected ? priorityColor : borderColor,
-                    },
-                  ]}
-                  onPress={() => setPriority(option.value)}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons
-                    name={option.icon as any}
-                    size={20}
-                    color={isSelected ? "#FFFFFF" : iconColor}
-                  />
-                  <ThemedText
-                    style={[
-                      styles.priorityLabel,
-                      isSelected && styles.priorityLabelSelected,
-                    ]}
-                  >
-                    {option.label}
-                  </ThemedText>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+            {!statusTask && (
+              <Ionicons name="checkmark" size={18} color="#FFF" />
+            )}
+          </Button>
+
+          <Button
+            style={[
+              styles.priorityOption,
+              {
+                backgroundColor: statusTask ? tintColor : backgroundColor,
+                borderColor: statusTask ? tintColor : borderColor,
+              },
+            ]}
+            onPress={() => handleChangeTaskStatus(true)}
+          >
+            <ThemedText
+              style={[
+                styles.priorityLabel,
+                statusTask && styles.priorityLabelSelected,
+              ]}
+            >
+              Completado
+            </ThemedText>
+
+            {statusTask && <Ionicons name="checkmark" size={18} color="#FFF" />}
+          </Button>
         </View>
 
         {/* Action Buttons */}
         <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={[
-              styles.button,
-              styles.cancelButton,
-              { backgroundColor: backgroundColor, borderColor },
-            ]}
-            onPress={handleClose}
-            activeOpacity={0.8}
-          >
-            <ThemedText style={styles.cancelButtonText}>Cancelar</ThemedText>
-          </TouchableOpacity>
-
-          <TouchableOpacity
+          <Button
             style={[
               styles.button,
               styles.submitButton,
               { backgroundColor: tintColor },
             ]}
             onPress={handleSubmit}
-            activeOpacity={0.8}
           >
             <ThemedText style={styles.submitButtonText}>
               {task ? "Actualizar" : "Crear"}
             </ThemedText>
-          </TouchableOpacity>
+          </Button>
         </View>
       </View>
     </Pressable>
@@ -284,6 +205,7 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
+    borderColor: "#DDD",
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
@@ -308,6 +230,7 @@ const styles = StyleSheet.create({
   priorityContainer: {
     flexDirection: "row",
     gap: 12,
+    marginBottom: 24,
   },
   priorityOption: {
     flex: 1,
@@ -315,7 +238,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 12,
     borderWidth: 2,
@@ -331,6 +254,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 12,
     marginTop: 8,
+  },
+  completed: {
+    backgroundColor: "#34b8c7ff",
   },
   button: {
     flex: 1,

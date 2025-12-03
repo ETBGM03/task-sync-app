@@ -1,25 +1,26 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
   ListRenderItemInfo,
   StyleSheet,
-  TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
 
 import { TaskItem } from "@/components/card-task";
 import EmptyState from "@/components/empty-state";
+import Header from "@/components/header";
 import TaskFormContent from "@/components/modal-create-task";
 import { OfflineBanner } from "@/components/offline-banner";
+import { RetryContent } from "@/components/RetryContent";
+import SearchHome from "@/components/search-home";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { useTask } from "@/hooks/useTask";
 import { useTaskStore } from "@/store/task-store";
 import { Task } from "@/types/task.types";
 import { notificationService } from "@/utils/notifications";
-import { Ionicons } from "@expo/vector-icons";
 import {
   BottomSheetBackdrop,
   BottomSheetModal,
@@ -28,29 +29,22 @@ import {
 
 export default function HomeScreen() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-
+  const [searchQuery, setSearchQuery] = useState("");
+  const { query } = useTask();
   const {
     tasks,
-    isLoading,
     isOnline,
+    setTasks,
     addTask,
     updateTask,
     deleteTask,
     toggleTaskComplete,
   } = useTaskStore();
 
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const textColor = useThemeColor({}, "text");
-  const iconColor = useThemeColor({}, "icon");
   const tintColor = useThemeColor({}, "tint");
 
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
-  const handleSheetChanges = useCallback((index: number) => {
-    console.log("handleSheetChanges", index);
-  }, []);
-
-  const snapPoints = useMemo(() => ["50%", "75%"], []);
+  const snapPoints = useMemo(() => ["50%", "60%"], []);
 
   const handleEditTask = (task: Task) => {
     setEditingTask(task);
@@ -62,13 +56,11 @@ export default function HomeScreen() {
     bottomSheetModalRef.current?.present();
   };
 
-  const handleSubmitTask = async (data: Partial<Task>) => {
+  const handleSubmitTask = async (data: Task) => {
     if (editingTask) {
-      // Update existing task
-      await updateTask(editingTask.id, data);
+      updateTask(editingTask.id, data);
     } else {
-      // Create new task
-      await addTask(data as Task);
+      addTask(data);
       // Schedule reminder notification
       notificationService.scheduleTaskReminder(data.title!, "new-task", 60);
     }
@@ -109,7 +101,6 @@ export default function HomeScreen() {
         />
       );
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
 
@@ -126,7 +117,17 @@ export default function HomeScreen() {
   );
 
   const renderMainContent = () => {
-    if (isLoading && !tasks.length) {
+    if (query.error) {
+      return (
+        <RetryContent
+          message={query.error ?? undefined}
+          onRetry={query.refetch}
+          isLoading={query.isRefetching || query.isLoading}
+        />
+      );
+    }
+
+    if (query.isLoading && !tasks.length) {
       return (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={tintColor} />
@@ -147,66 +148,28 @@ export default function HomeScreen() {
     );
   };
 
+  useEffect(() => {
+    if (query.data && Array.from(query.data) && tasks.length === 0) {
+      setTasks(query.data);
+    }
+  }, [query.data, setTasks, tasks.length]);
+
   return (
     <>
       <ThemedView style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <ThemedText type="title" style={styles.headerTitle}>
-              Mis Tareas
-            </ThemedText>
-            <ThemedText style={styles.headerSubtitle}>
-              {completedCount} de {totalCount} completadas
-            </ThemedText>
-          </View>
-          <TouchableOpacity
-            style={[styles.addButton, { backgroundColor: tintColor }]}
-            activeOpacity={0.8}
-            onPress={handleCreateTask}
-          >
-            <Ionicons name="add" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
+        <Header
+          totalCount={totalCount}
+          completedCount={completedCount}
+          handleCreateTask={handleCreateTask}
+        />
 
-        {/* Search Bar */}
-        <View
-          style={[
-            styles.searchContainer,
-            {
-              backgroundColor: useThemeColor(
-                { light: "#F2F2F7", dark: "#2C2C2E" },
-                "background"
-              ),
-            },
-          ]}
-        >
-          <Ionicons
-            name="search"
-            size={20}
-            color={iconColor}
-            style={styles.searchIcon}
-          />
-          <TextInput
-            style={[styles.searchInput, { color: textColor }]}
-            placeholder="Buscar tareas..."
-            placeholderTextColor={iconColor}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery("")}>
-              <Ionicons name="close-circle" size={20} color={iconColor} />
-            </TouchableOpacity>
-          )}
-        </View>
+        <SearchHome searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
 
         {renderMainContent()}
       </ThemedView>
 
       <BottomSheetModal
         ref={bottomSheetModalRef}
-        onChange={handleSheetChanges}
         snapPoints={snapPoints}
         backdropComponent={renderBackdrop}
         enablePanDownToClose
@@ -218,7 +181,7 @@ export default function HomeScreen() {
           <TaskFormContent
             task={editingTask as Task}
             onClose={() => bottomSheetModalRef.current?.dismiss()}
-            onSubmit={handleSubmitTask}
+            onSubmit={(data) => handleSubmitTask(data as Task)}
           />
         </BottomSheetScrollView>
       </BottomSheetModal>
@@ -232,33 +195,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fffd",
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
-  },
-  headerTitle: {
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    opacity: 0.6,
-  },
-  addButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   searchContainer: {
     flexDirection: "row",

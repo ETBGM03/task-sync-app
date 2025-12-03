@@ -12,8 +12,6 @@ import "react-native-reanimated";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { useNetworkStatus } from "@/hooks/use-network-status";
-import { useTaskStore } from "@/store/task-store";
 import { notificationService } from "@/utils/notifications";
 import { useEffect } from "react";
 
@@ -21,26 +19,12 @@ export const unstable_settings = {
   anchor: "(tabs)",
 };
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      gcTime: 1000 * 60 * 10, // 10 minutes
-    },
-  },
-});
+const queryClient = new QueryClient();
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
-  const loadFromStorage = useTaskStore((state) => state.loadFromStorage);
-
-  // Initialize network monitoring
-  useNetworkStatus();
 
   useEffect(() => {
-    // Load tasks from storage on app start
-    loadFromStorage();
-
     // Request notification permissions
     notificationService.requestPermissions();
   }, []);
