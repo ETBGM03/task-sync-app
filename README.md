@@ -30,18 +30,26 @@ Hook usado para cachear funciones, evitando su recreación en cada renderizado d
 
 #### Explica cómo manejarias
 
-- Para el manejo de cache en react query, tendremos en cuenta:
+1 Para el manejo de cache en react query, tendremos en cuenta:
 
   - las props `staleTime` & `gcTime` para definir el tiempo que los datos se consideran frescos y el tiempo que permanecen en cache antes de ser eliminados. (React query maneja esto internamiente con un tiempo estimado de 5 minutos por default)
 
-  - Para prevenir doble request en pantallas navegables usando react query, contamos con varias props que nos ayudan a controlar el request (refetchOnWindowFocus, refetchOnMount, staleTime)
+  - invalidateQuery que es una utilidad para refrescar la data en caso de que se apliquen actualizaciones optimistas o cualquier update a algun servicio
+
+2 Para sincronizar las operaciones offline -> online, optaria por local-first con algun servicio externos que me permita mantener la sincrona de la data y evitar conflictos entre actualizaciones. Seguido de eso, solo es generar una utilidad para hacer POST al backend
+
+3 Para prevenir doble request en pantallas navegables usando react query, contamos con varias props que nos ayudan a controlar el request (refetchOnWindowFocus, refetchOnMount, staleTime). Incluso react-query nos ayuda a prevenir eso ya que en lo posible siempre va primero a la caché.
 
 #### Diferencia entre Expo y RN CLI
 
-- La principal diferencia a grandes rasgos es la agilidad de desarrollo. Expo al ser un framework (capa encima de React Native) ya incluye muchas tools que son útiles en cualquier app.
+1 La principal diferencia a grandes rasgos es la agilidad de desarrollo. Expo al ser un framework (capa encima de React Native) ya incluye muchas tools que son útiles en cualquier app.
   En RN CLI tenemos que configurar todo manualmente, lo que nos da más flexibilidad pero requiere más tiempo, conocimiento y esfuerzo.
 
-- Para ese tipo de App optaría por Expo ya que nos prevee APIs listas para integrar de una manera sencilla, teniendo en cuenta los depp link con expo son mucho más faciles de configurar y manejar (podemos hacer uso de links universales lo que permite una mejor experiencia de usuario). Y para automatizar los deploys expo cuenta con Expo EAS que facilita mucho el proceso.
+2 Para ese tipo de App optaría por Expo ya que nos prevee APIs listas para integrar de una manera sencilla, teniendo en cuenta los depp link con expo son mucho más faciles de configurar y manejar (podemos hacer uso de links universales lo que permite una mejor experiencia de usuario). Y para automatizar los deploys expo cuenta con Expo EAS que facilita mucho el proceso.
+
+### Ejercios Punto 2
+
+Su realiación los encontrará en el folder `Exercises`
 
 #### Describe rendiemiento de una App RN
 
@@ -50,14 +58,22 @@ Hook usado para cachear funciones, evitando su recreación en cada renderizado d
 - Para imagenes hay una lib llamada react-native-fast-image que optimiza la carga y el cacheo de imagenes.
 - Para el bundle usaría Hermes, cacheo de imagenes, module federation (como Re.Pack), fonts optimizadas.
 
+#### Manejo de estado global
+
+Para esta prueba usé Zustand, ya que es una lib de estado global muy facil de usar, de implementar. Tambien incluye middlewares para peristencia en local
+
 #### Arquitectura y Backend
 
-- Para la arquitectura de app optaría por scremming architecture, ya que nos permite tener una buena separación de responsabilidades y facilita el mantenimiento y escalabilidad de la app.
+ * Para la app mobile optaria por seguir TDD + HEX, lo que nos facilita la escalabilidad de desarrollo y logica de negocio separada de la UI
+ * Para backend optaria por DDD ya que asi nos aseguramos de separar completamente la logica de negocio con implementacion (aderirse al framwork, a bd, entre otros)
+ * Para el manejo offline optaria por un servicio externos que me permita sincronizar/evitar conflictos con acciones offline, lo que facilitaria la integracion con backend
+ * Varia mucho segun la necesidad, optaria por implementar JWT como media de autenticacion e integracion con backend (se puede agregar una capa extra de seguridad llamada 'Signature')
 
 folder estructure:
 
 ```
 src/
+   app
    modules/
       auth/
          screens/
@@ -71,15 +87,106 @@ src/
          hooks/
          services/
          models/
-   profile/
-   notifications/
+   utils/
    shared/
       ui/
       utils/
       hooks/
       api/
+      services/
 ```
 
 - Para CI/CD usando EAS, lo primero es hacer la configuracion de EAS en la nube y en el proyecto.
   Luego configurar los workflows de build y submit en el archivo eas.json, definiendo los perfiles de build (development, production) y las credenciales necesarias para cada plataforma (iOS y Android).
   Tambien configurar los workflows en github action para automatizar el proceso de build y deploy en cada push o pull request a la rama main o production.
+
+
+#### Uso de una funcionalidad nativa
+
+Elegi `Notificaciones locales` ya que es una manera sencilla de brindar retro-alimentacion al usuario de cualquier accion la cual genera una buena UX 
+
+
+## **Requisitos del Sistema**
+Tengase en cuenta que este proyecto esta realizado con Expo, por lo que debe tener instalado en su maquina los siguientes programas
+
+- **Node.js**: v22 o superior.
+- **Expo CLI**: Instalado globalmente.
+- **Android Studio**: Para emulación y compilación en Android.
+- **Xcode**: Para emulación y compilación en iOS.
+
+## **Decisiones Arquitectónicas**
+
+- **Expo Router**: Se utilizó Expo Router para gestionar la navegación en vista de que es la predetermianda para las nuevas versiones y a futuro es la que recibirá más soporte y desarrollo por parte del equipo de Expo.
+- **Zustand**: Libreria para el manejo de estado global, se optó por esta librería debido a su simplicidad y facilidad de uso en comparación con Redux, especialmente para aplicaciones pequeñas y medianas.
+- **React Query**: Se eligió React Query para la gestión de datos remotos debido a su capacidad para manejar el almacenamiento en caché, la sincronización de datos y las actualizaciones automáticas, lo que simplifica significativamente la lógica de manejo de datos en comparación con otras soluciones como Redux.
+
+
+
+## **Instalación**
+
+1. Clona el repositorio:
+
+   ```bash
+   git clone git@github.com:ETBGM03/task-sync-app.git || https://github.com/ETBGM03/task-sync-app.git
+   ```
+
+   ```bash
+   cd task-sync-app
+   ```
+
+2. Instala las dependencias:
+
+   ```bash
+   yarn install
+   ```
+
+3. Configura las variables de entorno:
+
+   - Crea un archivo `.env` en la raíz del proyecto.
+   - Agrega las variable:
+
+     ```
+      EXPO_PUBLIC_APP_API_URL_DOMAIN="http://localhost:3001/api
+     ```
+
+
+4. Inicia la aplicación:
+
+   ```bash
+   npx expo start --clear
+   ```
+
+   - Para iOS: presiona `i` sobre la terminal
+   - Para Android: presiona `a` sobre la terminal
+
+
+## **Instalación Backedn**
+
+Este proyecto corre tambien con una API externa corriendo localmente, lo que permite simular el ciclo completo de una app real.
+Para ejecutarlo debe seguir estas instrucciones
+
+1. Clona el repositorio:
+
+   ```bash
+   git clone git@github.com:ETBGM03/task-sync-app.git || https://github.com/ETBGM03/task-sync-app.git
+   ```
+
+   ```bash
+   cd task-sync-app
+   ```
+
+2. Instala las dependencias:
+
+   ```bash
+   yarn install
+   ```
+3. Ejecuta el servidor
+```bash
+   yarn start
+   ```
+
+## **Pruebas Unitarias**
+
+El proyecto incluye pruebas unitarias para garantizar la calidad y el correcto funcionamiento de los componentes. Se utiliza **Jest** como framework principal para las pruebas. También se implementó **React Native Testing Library** 
+
+Las pruebas unitarias siguen la convención de nombrar los archivos de prueba con la extensión `.test.ts` o `.test.tsx`.
