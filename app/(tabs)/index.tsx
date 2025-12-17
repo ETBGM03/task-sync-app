@@ -64,7 +64,7 @@ export default function HomeScreen() {
     handleOpenSheetModal();
   };
 
-  const handleSubmitTask = async (data: Task) => {
+  const handleSubmitTask = async (data: Omit<Task, "id" | "createdAt">) => {
     if (editingTask) {
       updateTask(editingTask.id, data);
       handleCloseSheetModal();
@@ -111,7 +111,7 @@ export default function HomeScreen() {
         />
       );
     },
-    []
+    [deleteTask, handleToggleTask]
   );
 
   const renderBackdrop = useCallback(
@@ -189,9 +189,9 @@ export default function HomeScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <TaskFormContent
-            task={editingTask as Task}
+            task={editingTask || ({} as Task)}
             onClose={() => bottomSheetModalRef.current?.dismiss()}
-            onSubmit={(data) => handleSubmitTask(data as Task)}
+            onSubmit={(data) => handleSubmitTask(data)}
           />
         </BottomSheetScrollView>
       </BottomSheetModal>

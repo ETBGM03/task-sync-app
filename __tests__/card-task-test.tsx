@@ -10,10 +10,9 @@ describe("<TaskItem/> component", () => {
   const mockTask: Task = {
     id: "task-1",
     title: "Test Task",
-    description: "Test Description",
     completed: false,
-    priority: "medium",
     createdAt: "2024-01-15T10:00:00Z",
+    isSynced: true,
   };
 
   const mockHandlers = {
@@ -57,25 +56,9 @@ describe("<TaskItem/> component", () => {
       expect(screen.getByText("Test Task")).toBeTruthy();
     });
 
-    it("displays task description when provided", () => {
-      render(
-        <TaskItem
-          index={0}
-          onDelete={mockHandlers.onDelete}
-          onEdit={mockHandlers.onEdit}
-          onToggle={mockHandlers.onToggle}
-          task={mockTask}
-        />
-      );
-
-      expect(screen.getByTestId("task-description")).toBeTruthy();
-      expect(screen.getByText("Test Description")).toBeTruthy();
-    });
-
     it("does not display description when empty", () => {
       const taskWithoutDescription: Task = {
         ...mockTask,
-        description: "",
       };
 
       render(
@@ -324,7 +307,6 @@ describe("<TaskItem/> component", () => {
     it("renders task with high priority", () => {
       const highPriorityTask: Task = {
         ...mockTask,
-        priority: "high",
       };
 
       render(

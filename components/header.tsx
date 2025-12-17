@@ -9,7 +9,7 @@ import { Button } from "./ui/button";
 interface HeaderProps {
   completedCount: number;
   totalCount: number;
-  handleCreateTask: () => void;
+  handleCreateTask?: () => void;
 }
 
 export default function Header(props: HeaderProps) {
@@ -20,16 +20,21 @@ export default function Header(props: HeaderProps) {
   return (
     <View style={styles.header}>
       <View>
-        <ThemedText type="title" style={styles.headerTitle}>
+        <ThemedText
+          testID="header-title"
+          type="title"
+          style={styles.headerTitle}
+        >
           Mis Tareas
         </ThemedText>
-        <ThemedText style={styles.headerSubtitle}>
+        <ThemedText testID="header-helper-count" style={styles.headerSubtitle}>
           {completedCount} de {totalCount} completadas
         </ThemedText>
       </View>
       <Button
         style={[styles.addButton, { backgroundColor: tintColor }]}
-        onPress={handleCreateTask}
+        onPress={() => handleCreateTask?.()}
+        testID="header-add-task"
       >
         <Ionicons name="add" size={24} color="#FFFFFF" />
       </Button>

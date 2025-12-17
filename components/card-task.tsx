@@ -61,15 +61,6 @@ export const TaskItem: React.FC<TaskItemProps> = ({
         >
           {task.title}
         </Text>
-        {task.description && (
-          <Text
-            style={styles.description}
-            numberOfLines={2}
-            testID="task-description"
-          >
-            {task.description}
-          </Text>
-        )}
         <View style={styles.footer}>
           <Text style={styles.date} testID="task-date">
             {new Date(task.createdAt).toLocaleDateString()}
@@ -140,12 +131,6 @@ const styles = StyleSheet.create({
   completedText: {
     textDecorationLine: "line-through",
     color: "#999",
-  },
-  description: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 8,
-    lineHeight: 20,
   },
   footer: {
     flexDirection: "row",
